@@ -1,0 +1,14 @@
+{
+  "id": "text-clipper",
+  "name": "文本剪藏",
+  "version": "0.1.0",
+  "description": "采集阶段：把任意文本剪藏为知识库草稿文档，自动重索引立即可查",
+  "entry": "index.js",
+  "permissions": [
+    "file:read",
+    "file:write",
+    "db:read",
+    "db:write",
+    "agent:tools"
+  ]
+}
