@@ -1,8 +1,8 @@
 {
   "id": "text-clipper",
   "name": "文本剪藏",
-  "version": "0.1.0",
-  "description": "采集阶段：把任意文本剪藏为知识库草稿文档，自动重索引立即可查",
+  "version": "0.2.0",
+  "description": "网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查",
   "entry": "index.js",
   "permissions": [
     "file:read",
@@ -10,5 +10,14 @@
     "db:read",
     "db:write",
     "agent:tools"
+  ],
+  "contributions": [
+    {
+      "point": "workspace.action",
+      "slot": "editor.header_right",
+      "action": "剪藏",
+      "icon": "cloud-download",
+      "panel": "clipper.form"
+    }
   ]
 }
