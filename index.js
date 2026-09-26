@@ -32,70 +32,58 @@ function timestamp() {
 }
 
 /** 解析目标仓库（repoId 缺省取第一个） */
-function resolveRepo(context, repoId) {
-  const repos = context.listRepositories() || []
+async function resolveRepo(context, repoId) {
+  const repos = (await context.listRepositories()) || []
   if (repos.length === 0) return null
   if (repoId) return repos.find((r) => r.id === repoId) || null
   return repos[0]
 }
 
 /** 按路径前缀找文件所属仓库（用于剪藏落盘后精准重索引） */
-function findRepoByPath(context, filePath) {
+async function findRepoByPath(context, filePath) {
   const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
   const target = norm(filePath)
-  return (context.listRepositories() || []).find((r) => target.startsWith(norm(r.localPath) + '/')) || null
+  return ((await context.listRepositories()) || []).find((r) => target.startsWith(norm(r.localPath) + '/')) || null
 }
 
-/**
- * 抓取网页正文并转为 Markdown（简易 HTML 提取，不依赖外部服务）。
- * @returns {title, content, finalUrl}
- */
+/** 网页正文抓取（批次 B 收编 0.9.0）：改走内核 ctx.web 统一材料通道——charset 嗅探转码（GBK 防乱码）、
+ *  私网拦截、同域礼貌限速、响应缓存与审计在 WebCrawlerService；本插件不再自持正则提取副本。
+ *  @returns {title, content, finalUrl} */
 async function fetchAndExtract(url) {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 20000)
-  let html = ''
-  let finalUrl = url
-  try {
-    const resp = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'Mozilla/5.0 (Knomi Clip)' } })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    finalUrl = resp.url || url
-    html = await resp.text()
-  } finally {
-    clearTimeout(timer)
+  if (!context || !context.web || typeof context.web.read !== 'function') {
+    throw new Error('内核材料通道（ctx.web）不可用，请升级宿主后重试')
   }
-  if (html.length > 2 * 1024 * 1024) html = html.substring(0, 2 * 1024 * 1024)
-
-  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
-  const title = titleMatch ? titleMatch[1].trim().replace(/\s+/g, ' ') : '剪藏页面'
-  const content = html
-    // 剥离脚本/样式/导航/页脚
-    .replace(/<(script|style|nav|footer|header|aside|form|iframe|noscript)[\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    // 块级标签 → 换行
-    .replace(/<\/(p|div|h[1-6]|li|tr|section|article|blockquote)>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<li[^>]*>/gi, '- ')
-    .replace(/<h[1-6][^>]*>/gi, '## ')
-    // 去标签
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-  return { title, content: content.substring(0, 60000), finalUrl }
+  const r = await context.web.read(url)
+  return { title: String((r && r.title) || '剪藏页面'), content: String((r && r.content) || ''), finalUrl: String((r && r.finalUrl) || url) }
 }
 
 /** 文件写入某仓库目录内时触发该仓库重索引，并验证文档可检索 */
 async function reindexIfInRepo(context, filePath, title) {
-  const repo = findRepoByPath(context, filePath)
+  const repo = await findRepoByPath(context, filePath)
   if (!repo) {
     if (context.log) context.log(`剪藏 ${title} 落点不在任何仓库内，跳过重索引: ${filePath}`)
     return
   }
   await context.reindexRepository(repo.id)
   const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
-  const indexed = (context.getDocuments(repo.id) || []).find((d) => norm(d.filePath) === norm(filePath))
+  const indexed = ((await context.getDocuments(repo.id)) || []).find((d) => norm(d.filePath) === norm(filePath))
   if (!indexed && context.log) context.log(`⚠️ 剪藏已写入 ${filePath}，但重索引后未在仓库「${repo.name}」文档列表中找到它`)
+}
+
+
+// ---- R3-S3 剪藏→翻译联动：MyMemory 免费直翻（自持实现——跨包禁互依，不调 translator）----
+// 已知约束：单请求 ≤500 字符（本处截断至 3000）、匿名配额约 5k 字/天/IP、仅英→中方向（剪藏外文场景）
+const MM_ENDPOINT = 'https://api.mymemory.translated.net/get'
+async function mmTranslate(text, targetLang) {
+  const trimmed = String(text || '').trim().slice(0, 3000)
+  if (!trimmed) return ''
+  const url = MM_ENDPOINT + '?q=' + encodeURIComponent(trimmed) + '&langpair=en|' + encodeURIComponent(targetLang)
+  const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Knomi Clip)' } })
+  if (!resp.ok) throw new Error('翻译服务 HTTP ' + resp.status)
+  const data = await resp.json()
+  const t = data && data.responseData && data.responseData.translatedText
+  if (typeof t !== 'string' || !t.trim()) throw new Error('翻译服务返回异常')
+  return t
 }
 
 /**
@@ -110,10 +98,31 @@ async function saveClip(params) {
 
   const { title, content, finalUrl } = await fetchAndExtract(url)
 
+  // 空抓取设防：正文过短说明页面疑似动态渲染/反爬，落盘一篇空文档只会误导用户
+  if (String(content || '').trim().length < 30) {
+    throw new Error('抓取到的正文过短或为空（页面疑似动态渲染或需登录）。可换用：复制页面正文后对小诺说「把这段话存到知识库」。')
+  }
+
+  // R3-S3 翻译后入库（可选）：勾选目标语言 → MyMemory 直翻 → 对照节追加（原文全文保留在上）
+  const translateLang = String(params?.translate_lang || '').trim()
+  let translationSection = ''
+  if (translateLang && translateLang !== 'none') {
+    const truncated = content.length > 3000
+    const translation = await mmTranslate(truncated ? content.slice(0, 3000) : content, translateLang)
+    translationSection = [
+      '---',
+      '',
+      '## 译文（' + translateLang + (truncated ? '，截断至前 3000 字符' : '') + '，MyMemory 自动翻译）',
+      '',
+      translation,
+      '',
+    ].join('\n')
+  }
+
   // 落盘：dirPath（渲染端传入：目标芯片目录或活动仓库/剪藏）；缺省回退首个仓库 clippings/，再退 ~/.knomi/clips
   let targetDir = String(params?.dirPath || '').trim()
   if (!targetDir) {
-    const repo = resolveRepo(context)
+    const repo = await resolveRepo(context)
     targetDir = repo ? `${repo.localPath.replace(/[\\/]+$/, '')}/clippings` : join(homedir(), '.knomi', 'clips')
   }
   const fileName = `${timestamp()}-${sanitizeFileName(title)}.md`
@@ -130,6 +139,7 @@ async function saveClip(params) {
     `> 来源：<${finalUrl}>`,
     '',
     content,
+    ...(translationSection ? [translationSection] : []),
     '',
   ].join('\n')
   await context.writeFile(filePath, md)
@@ -137,10 +147,55 @@ async function saveClip(params) {
   return { filePath, title }
 }
 
+/** frontmatter 双格式解析：宿主索引器存 JSON.stringify(对象)（`{"type":"clip","source":...}`），
+ *  兼容旧 YAML 文本行；产出 { isClip, source }。
+ *  E2E 实证回归：原查询 LIKE '%type: clip%'（YAML 带空格文本）对 JSON 存储永不命中，剪藏历史页恒为空。 */
+function parseClipMeta(frontmatter) {
+  const raw = String(frontmatter || '')
+  if (!raw) return { isClip: false, source: '' }
+  try {
+    const fm = JSON.parse(raw)
+    if (fm && typeof fm === 'object' && !Array.isArray(fm)) {
+      return { isClip: fm.type === 'clip', source: String(fm.source || '').trim() }
+    }
+  } catch { /* 非 JSON：按旧文本格式解析 */ }
+  const mSource = raw.split(/\r?\n/).find((l) => l.trim().startsWith('source:')) || ''
+  return { isClip: raw.includes('type: clip'), source: mSource ? mSource.trim().slice(7).trim() : '' }
+}
+
+/** nav.entry 页数据入口（ADR-202 Phase 2 第三消费者）：剪藏历史一览（type: clip 的已索引文档） */
+async function pageClipHistory() {
+  if (!context) throw new Error('剪藏插件未激活')
+  const rows = (await context.query(
+    `SELECT d.title, d.file_path AS filePath, d.frontmatter AS frontmatter, d.created_at AS createdAt
+     FROM documents d WHERE d.frontmatter LIKE '%clip%'
+     ORDER BY d.created_at DESC LIMIT 300`,
+  )) || []
+  const items = []
+  for (const r of rows) {
+    const meta = parseClipMeta(r.frontmatter)
+    if (!meta.isClip) continue
+    items.push({
+      title: r.title || r.filePath,
+      source: meta.source,
+      createdAt: r.createdAt ? String(r.createdAt).slice(0, 10) : '',
+    })
+  }
+  return {
+    title: '剪藏历史',
+    columns: [
+      { key: 'title', label: '标题' },
+      { key: 'source', label: '来源' },
+      { key: 'createdAt', label: '剪藏日期', width: 110 },
+    ],
+    rows: items,
+  }
+}
+
 module.exports = {
   id: PLUGIN_ID,
   name: '文本剪藏',
-  version: '0.2.0',
+  version: '0.2.4',
   description: '网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查',
 
   activate(ctx) {
@@ -155,6 +210,13 @@ module.exports = {
       hint: '输入网页地址，Knomi 将抓取正文并保存为 Markdown 文档（本地存储，无需 AI 服务）。',
       fields: [
         { key: 'url', label: '网页地址', type: 'text', placeholder: 'https://example.com/article', required: true },
+        {
+          key: 'translate_lang', label: '翻译后入库', type: 'select', placeholder: '不翻译', options: [
+            { value: 'none', label: '不翻译' },
+            { value: 'zh-CN', label: '中文' },
+            { value: 'en', label: '英文' },
+          ],
+        },
         { key: 'dirPath', label: '保存到', type: 'target_dir' },
       ],
       submitLabel: '剪藏并打开',
@@ -178,7 +240,7 @@ module.exports = {
         }
       },
       async (args) => {
-        const repo = resolveRepo(ctx, args.repoId)
+        const repo = await resolveRepo(ctx, args.repoId)
         if (!repo) return { output: '', error: '没有可用仓库：请先在「仓库管理」添加至少一个仓库' }
 
         const tagLine = Array.isArray(args.tags) && args.tags.length > 0
@@ -203,7 +265,7 @@ module.exports = {
 
         // 验证：重索引后文档应能被知识库检索到（路径规范化比较，避免分隔符差异误报）
         const norm = (p) => String(p || "").replace(/\\/g, "/").replace(/\/+$/, "").toLowerCase();
-        const indexed = (ctx.getDocuments(repo.id) || []).find((d) => norm(d.filePath) === norm(filePath));
+        const indexed = ((await ctx.getDocuments(repo.id)) || []).find((d) => norm(d.filePath) === norm(filePath));
 
         return {
           output: indexed
@@ -223,11 +285,13 @@ module.exports = {
         parameters: { type: 'object', properties: {} }
       },
       async () => {
-        const repos = ctx.listRepositories() || []
+        const repos = (await ctx.listRepositories()) || []
         const rows = []
         for (const repo of repos) {
-          for (const d of ctx.getDocuments(repo.id) || []) {
-            if (String(d.filePath || '').includes('/clippings/') || String(d.filePath || '').includes('/剪藏/')) {
+          for (const d of (await ctx.getDocuments(repo.id)) || []) {
+            // 路径分隔符归一：Windows 存储为反斜杠，统一按正斜杠判断（修复 list_clippings 在 Windows 恒空）
+            const p = String(d.filePath || '').replace(/\\/g, '/')
+            if (p.includes('/clippings/') || p.includes('/剪藏/')) {
               rows.push({ title: d.title || d.filePath, repo: repo.name || repo.id, path: d.filePath })
             }
           }
@@ -248,4 +312,5 @@ module.exports = {
   },
 
   saveClip,
+  pageClipHistory,
 }

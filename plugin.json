@@ -1,7 +1,7 @@
 {
   "id": "text-clipper",
   "name": "文本剪藏",
-  "version": "0.2.0",
+  "version": "0.9.0",
   "description": "网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查",
   "entry": "index.js",
   "permissions": [
@@ -9,7 +9,9 @@
     "file:write",
     "db:read",
     "db:write",
-    "agent:tools"
+    "agent:tools",
+    "net:http",
+    "net:web"
   ],
   "contributions": [
     {
@@ -18,6 +20,14 @@
       "action": "剪藏",
       "icon": "cloud-download",
       "panel": "clipper.form"
+    },
+    {
+      "point": "nav.entry",
+      "slot": "nav.sidebar",
+      "key": "clip-history",
+      "action": "剪藏历史",
+      "method": "pageClipHistory"
     }
-  ]
+  ],
+  "usage": "把网页和碎片文字一键收进知识库。\n怎么用：\n1. 网页剪藏：「知识库」页右上角「剪藏」按钮 → 粘贴网页地址 → 抓取正文存为 Markdown 文档。\n2. 文本剪藏：随时对小诺说「把这段话存到知识库」（或选中文字后划词快捷键触发 → 补一句\"存入知识库\"；划词/其他全局快捷键的默认值与实际生效键位见「设置 → 快捷键」）。\n入库自动重索引，立即可搜索、可出题、可进图谱。\n3. 侧边栏「剪藏历史」页——所有剪藏记录（标题/来源/日期）一页回顾。"
 }
