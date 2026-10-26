@@ -1,7 +1,7 @@
 {
   "id": "text-clipper",
-  "name": "文本剪藏",
-  "version": "0.9.0",
+  "name": "剪藏",
+  "version": "0.14.0",
   "description": "网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查",
   "entry": "index.js",
   "permissions": [
@@ -15,19 +15,59 @@
   ],
   "contributions": [
     {
-      "point": "workspace.action",
-      "slot": "editor.header_right",
-      "action": "剪藏",
-      "icon": "cloud-download",
-      "panel": "clipper.form"
-    },
-    {
       "point": "nav.entry",
       "slot": "nav.sidebar",
       "key": "clip-history",
-      "action": "剪藏历史",
-      "method": "pageClipHistory"
+      "action": "$t{text-clipper.nav.clip-history}",
+      "method": "pageClipHistory",
+      "icon": "clip",
+      "order": 1
     }
   ],
-  "usage": "把网页和碎片文字一键收进知识库。\n怎么用：\n1. 网页剪藏：「知识库」页右上角「剪藏」按钮 → 粘贴网页地址 → 抓取正文存为 Markdown 文档。\n2. 文本剪藏：随时对小诺说「把这段话存到知识库」（或选中文字后划词快捷键触发 → 补一句\"存入知识库\"；划词/其他全局快捷键的默认值与实际生效键位见「设置 → 快捷键」）。\n入库自动重索引，立即可搜索、可出题、可进图谱。\n3. 侧边栏「剪藏历史」页——所有剪藏记录（标题/来源/日期）一页回顾。"
+  "usage": "$t{text-clipper.usage}",
+  "i18n": {
+    "zh-CN": {
+      "text-clipper.nav.clip-history": "剪藏",
+      "text-clipper.usage": "**能干什么**：把网页和碎片文字一键收进知识库。\n\n**怎么用**：\n1. 网页剪藏：侧边栏「插件页面 → 剪藏」页顶部表单 → 粘贴网页地址 → 抓取正文存为 Markdown 文档，完成即在编辑器打开；同一网页重复剪藏会自动去重（直达已有文档）；\n2. 文本剪藏：随时对白泽说「把这段话存到知识库」（或选中文字后划词快捷键触发 → 补一句「存入知识库」；划词/其他全局快捷键的默认值与实际生效键位见「设置 → 快捷键」）；\n3. 剪藏页下方为全部剪藏记录：行点击打开文档、来源可点击回访原网页、标题即网页标题，一页回顾。\n\n**说明**：入库自动重索引，立即可搜索、可出题、可进图谱。",
+      "text-clipper.display-name": "剪藏"
+    },
+    "en-US": {
+      "text-clipper.nav.clip-history": "Clipper",
+      "text-clipper.usage": "**What it does**: clips web pages and fragments of text into your knowledge base in one move.\n\n**How to use**:\n1. Web clipping: top form on the sidebar \"Plugins → Clipping\" page → paste a URL → the body text is fetched and saved as a Markdown document, opening in the editor when done; clipping the same page twice is auto-deduplicated (opens the existing document);\n2. Text clipping: anytime, tell Baize \"Save this passage to the knowledge base\" (or select text anywhere and trigger the selection shortcut → add \"save to knowledge base\"; defaults and effective keys for the selection/global shortcuts are in \"Settings → Shortcuts\");\n3. Below the clipping page is the full clip history: click a row to open the document, click the source to revisit the original page, titles are the page titles — one-page recall.\n\n**Notes**: clips are re-indexed on entry — immediately searchable, question-generatable, and graph-ready.",
+      "text-clipper.display-name": "Clipper",
+      "剪藏": "Clipper",
+      "出网知情确认": "Outbound Transfer Consent",
+      "是": "Yes",
+      "否": "No",
+      "输入网页地址，Knownest 将抓取正文并保存为 Markdown 文档（本地存储，无需 AI 服务），完成即在编辑器打开。「翻译后入库」会把正文发送至 MyMemory（境外公共服务）做机翻：「出网知情确认」选「是」即同意出境（一次同意，此后不再询问）；不想出境请保持「否」或改选「不翻译」（仅本地保存，不出网）。": "Paste a URL and Knownest fetches the page body and saves it as a Markdown document (stored locally, no AI service needed), opening in the editor when done. \"Translate before saving\" sends the body to MyMemory (an overseas public service) for machine translation: choosing \"Yes\" under \"Outbound Transfer Consent\" consents to the transfer (one-time consent, not asked again); keep \"No\" or choose \"No translation\" to stay local (no outbound request).",
+      "**能干什么**：把网页和碎片文字一键收进知识库。\n\n**怎么用**：\n1. 网页剪藏：侧边栏「插件页面 → 剪藏」页顶部表单 → 粘贴网页地址 → 抓取正文存为 Markdown 文档，完成即在编辑器打开；同一网页重复剪藏会自动去重（直达已有文档）；\n2. 文本剪藏：随时对白泽说「把这段话存到知识库」（或选中文字后划词快捷键触发 → 补一句「存入知识库」；划词/其他全局快捷键的默认值与实际生效键位见「设置 → 快捷键」）；\n3. 剪藏页下方为全部剪藏记录：行点击打开文档、来源可点击回访原网页、标题即网页标题，一页回顾。\n\n**说明**：入库自动重索引，立即可搜索、可出题、可进图谱。": "**What it does**: clips web pages and fragments of text into your knowledge base in one move.\n\n**How to use**:\n1. Web clipping: top form on the sidebar \"Plugins → Clipping\" page → paste a URL → the body text is fetched and saved as a Markdown document, opening in the editor when done; clipping the same page twice is auto-deduplicated (opens the existing document);\n2. Text clipping: anytime, tell Baize \"Save this passage to the knowledge base\" (or select text anywhere and trigger the selection shortcut → add \"save to knowledge base\"; defaults and effective keys for the selection/global shortcuts are in \"Settings → Shortcuts\");\n3. Below the clipping page is the full clip history: click a row to open the document, click the source to revisit the original page, titles are the page titles — one-page recall.\n\n**Notes**: clips are re-indexed on entry — immediately searchable, question-generatable, and graph-ready.",
+      "网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查": "Web & text clipping: capture a web page's main content or save any text as a knowledge-base document; automatic re-indexing makes it searchable immediately.",
+      "网页剪藏": "Web Clip",
+      "网页地址": "URL",
+      "翻译后入库": "Translate & Save",
+      "不翻译": "No translation",
+      "中文": "Chinese",
+      "英文": "English",
+      "保存到（可选目录，留空=活动仓库 clippings/）": "Save To (optional directory; empty = active repository clippings/)",
+      "剪藏并打开": "Clip & Open",
+      "剪藏历史": "Clip History",
+      "标题": "Title",
+      "来源": "Source",
+      "剪藏日期": "Clipped On"
+    }
+  },
+  "category": "内容采集",
+  "tags": [
+    "剪藏",
+    "网页",
+    "收藏"
+  ],
+  "agentTools": [
+    {
+      "name": "clip_text"
+    },
+    {
+      "name": "list_clippings"
+    }
+  ]
 }

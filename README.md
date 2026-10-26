@@ -1,22 +1,17 @@
-# 文本剪藏
+# Knownest 插件：剪藏（text-clipper）
 
-网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查
+> 网页剪藏 + 文本剪藏：抓取网页正文或收藏任意文本为知识库文档，自动重索引立即可查。
 
-- 插件 ID：`text-clipper`
-- 版本：v0.2.0
-- 权限声明：file:read、file:write、db:read、db:write、agent:tools
+Knownest 官方插件的**社区分发仓**（消费型样板）——本仓内容为主仓 plugins/text-clipper/ 的同步快照，tag 与市场版本一致（当前 v0.14.0）。
 
-## 能力
+## 安装（插件市场 · 社区通道）
 
-- **网页剪藏**：知识库右上角「剪藏」按钮 → 表单弹窗输入 URL → 抓取正文保存为 Markdown（本地存储，无需 AI 服务），落点在仓库内时自动重索引并打开文档
-- **文本剪藏**：Agent 工具 `clip_text` 把任意文本剪藏为仓库 `clippings/` 草稿文档，自动重索引立即可查、可出题、可进图谱
-- **剪藏回顾**：Agent 工具 `list_clippings` 列出已采集内容
+- Knownest → 插件市场 → **社区**：搜索「剪藏」一键安装（GitHub topic `knownest-plugin` 自动收录）；
+- 或在插件市场「更多安装方式」粘贴仓库地址：`https://github.com/bugjc/knownest-plugin-text-clipper.git`。
 
-## 安装
+## 仓库即样板
 
-Knomi 插件页「社区市场」扫描安装（topic: knomi-plugin），或在「更多安装方式」中粘贴本仓库地址。
+本仓即一份完整可运行的插件源：plugin.json（清单 + 权限 + i18n 词典）、index.js 入口、lib/ 实现（部分插件另带 golden-cases.json 黄金用例）。**Fork 本仓、改清单 id 与实现，即可发布你自己的 Knownest 插件。**
 
-## 更新日志
-
-- v0.2.0：合并网页剪藏入口（workspace.action 贡献 + 表单面板 + URL 抓取），落仓库内自动重索引
-- v0.1.0：文本剪藏（clip_text / list_clippings）
+- 插件开发正典：https://github.com/bugjc/knownest/blob/main/docs/PLUGIN-AUTHORING.md
+- License：https://github.com/bugjc/knownest/blob/main/LICENSE
